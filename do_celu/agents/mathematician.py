@@ -4,15 +4,16 @@
 # Copyright 2022 Agenty 007
 #
 
-from spade import agent
-from spade.behaviour import CyclicBehaviour
-from spade.behaviour import OneShotBehaviour
+from time import sleep
+from spade import agent, quit_spade
+from do_celu.behaviours import BaseOneShotBehaviour
 from spade.message import Message
-
+from logging import Logger
 from do_celu.utils.performatives import Performatives
 from do_celu.entities.connection import ConnectionRequest, Connection
 from do_celu.utils.job_exit_code import JobExitCode
 from do_celu.config import Config, get_config
+from do_celu.context import get_logger
 
 graph=[ [ 0 , 4 ,20 ,16 ,14 ,17 , 3 , 8 ,19 ,19 ],
         [ 4 , 0 , 6 ,11 ,20 , 1 ,13 ,10 , 8 , 3 ],
@@ -25,8 +26,33 @@ graph=[ [ 0 , 4 ,20 ,16 ,14 ,17 , 3 , 8 ,19 ,19 ],
         [19 , 8 ,13 ,10 , 8 , 7 ,12 ,15 , 0 , 9 ],
         [19 , 3 ,19 , 6 , 5 ,12 , 6 ,11 , 9 , 0 ]]
 
-class MathAgent(agent.Agent):
-    class InformBestPath(BaseOneShotBehaviour):      
+LOGGER_NAME = get_config().MATHEMATICIAN_LOGGER_NAME
+
+
+class MathematicianAgent(agent.Agent):
+    # Behaviours:
+    inform_best_path: 'InformBestPath'
+    receive_client_demand: 'ReciveClientDemand'
+    receive_bus_routes: 'ReceiveBusRoutes'
+
+    # Agent state:
+    _logger: Logger
+    _config: Config
+
+    def __init__(self, jid: str, password: str, verify_security: bool = False):
+        super().__init__(jid, password, verify_security=verify_security)
+        self._config = get_config()
+        self._logger = get_logger(LOGGER_NAME)
+
+    class InformBestPath(BaseOneShotBehaviour):
+        agent: 'MathematicianAgent'
+
+        def __init__(self,):
+            super().__init__(LOGGER_NAME)
+
+        async def on_start(self):
+            self._logger.debug('InformBestPath running...')
+
         def tsp(needed, busroutes):
             nbuses = len(busroutes)
             for i in range (len(needed)):
@@ -62,10 +88,10 @@ class MathAgent(agent.Agent):
             return busroutes
 
         async def run(self):
-            print("Calculating the best route.")
-            #busroutes = tsp()
-            msg = Message(to=Config.MANAGER_JID)
-            msg.set_metadata("performative", Performatives.REQUEST)
+            self._logger.debug("Calculating the best route.")
+            # busroutes = tsp()
+            msg = Message(to=self._config.MANAGER_JID)
+            msg.set_metadata("performative", Performatives.INFORM)
             #msg.body = 
             try:
                 await self.send(msg)
@@ -75,30 +101,90 @@ class MathAgent(agent.Agent):
                 self.kill(JobExitCode.FAILURE)
                 return
 
-    class RecvRequestBestPath(BaseOneShotBehaviour):
-        
-        async def run(self):
-            print('Receiving the client demand...')
-            msg = await self.receive(timeout=30)
-            if msg:
-                print("Receiving the client demand succesfull - Body: {}".format(msg.body))
-                # TODO trigger getting the data
-            else:
-                print("Receiving the client demand failed after 30 seconds")
-            
-    
-    class ReceiveBusRoutes(BaseOneShotBehaviour):
-        async def run(self):
-            print('Receiving the bus routes and client demand...')
-            msg = await self.receive(timeout=30)
-            if msg:
-                print("Receiving the bus routes and client demand successful - Body: {}".format(msg.body))
-                # TODO trigger getting the data
-            else:
-                print("Receiving the bus routes and client demand failed after 30 seconds")
+        async def on_end(self):
+            self._logger.debug(f'InformBestPath ended')
 
+    class ReciveClientDemand(BaseOneShotBehaviour):
+        agent: 'MathematicianAgent'
+
+        def __init__(self, ):
+            super().__init__(LOGGER_NAME)
+
+        async def on_start(self):
+            self._logger.debug('ReciveClientDemand running...')
+
+        async def run(self):
+            msg = await self.receive(timeout=30)
+            msg.set_metadata("performative", Performatives.REQUEST)
+            if msg:
+                self._logger.debug(f'ReciveClientDemand msg received with body: {msg.body}')
+                # TODO trigger getting the data
+                self.exit_code = JobExitCode.SUCCESS
+            else:
+                self.exit_code = JobExitCode.FAILURE
+
+        async def on_end(self):
+            self._logger.debug(f'ReciveClientDemand ended with status: {self.exit_code.name}')
+
+    class ReceiveBusRoutes(BaseOneShotBehaviour):
+        agent: 'MathematicianAgent'
+
+        def __init__(self, ):
+            super().__init__(LOGGER_NAME)
+
+        async def on_start(self):
+            self._logger.debug('ReceiveBusRoutes running...')
+
+        async def run(self):
+            msg = await self.receive(timeout=30)
+            msg.set_metadata("performative", Performatives.REQUEST)
+            if msg:
+                self._logger.debug(f'ReceiveBusRoutes msg received with body: {msg.body}')
+                # TODO trigger getting the data
+                self.exit_code = JobExitCode.SUCCESS
+            else:
+                self.exit_code = JobExitCode.FAILURE
+
+        async def on_end(self):
+            self._logger.debug(f'ReceiveBusRoutes ended with status: {self.exit_code.name}')
 
     async def setup(self):
-        print("Hello World! I'm agent {}".format(str(self.jid)))
-        self.my_behav = self.MyBehav()
-        self.add_behaviour(self.my_behav)
+        self._logger.info('MathematicianAgent started')
+
+        self._logger.info('MathAgent started')
+        await self._setup_ReciveClientDemand()
+        await self._setup_ReceiveBusRoutes()
+        await self._setup_InformBestPath()
+
+        self.add_behaviour(self.ReciveClientDemand)
+        self.add_behaviour(self.ReceiveBusRoutes)
+        self.add_behaviour(self.InformBestPath)
+
+    async def _setup_ReciveClientDemand(self):
+        self.receive_client_demand = self.RequestAvailableConnections()
+    async def _setup_ReceiveBusRoutes(self):
+        self.receive_bus_routes = self.RequestAvailableConnections()
+    async def _setup_InformBestPath(self):
+        self.inform_best_path = self.RequestAvailableConnections()
+
+
+if __name__ == '__main__':
+    config = get_config()
+    logger = get_logger(config.MATHEMATICIAN_LOGGER_NAME)
+    mathematician = MathematicianAgent(
+        config.MATHEMATICIAN_JID,
+        config.MATHEMATICIAN_PASSWORD,
+    )
+
+    future = mathematician.start()
+    future.result()
+
+    while mathematician.is_alive():
+        try:
+            sleep(1)
+        except KeyboardInterrupt:
+            break
+
+    mathematician.stop()
+    logger.debug('Mathematician agent stopped')
+    quit_spade()
