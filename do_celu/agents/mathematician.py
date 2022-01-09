@@ -104,6 +104,7 @@ class MathematicianAgent(agent.Agent):
         async def on_end(self):
             self._logger.debug(f'InformBestPath ended')
 
+
     class ReciveClientDemand(BaseOneShotBehaviour):
         agent: 'MathematicianAgent'
 
@@ -113,11 +114,13 @@ class MathematicianAgent(agent.Agent):
         async def on_start(self):
             self._logger.debug('ReciveClientDemand running...')
 
+
         async def run(self):
             msg = await self.receive(timeout=30)
             msg.set_metadata("performative", Performatives.REQUEST)
             if msg:
                 self._logger.debug(f'ReciveClientDemand msg received with body: {msg.body}')
+
                 # TODO trigger getting the data
                 self.exit_code = JobExitCode.SUCCESS
             else:
@@ -125,6 +128,7 @@ class MathematicianAgent(agent.Agent):
 
         async def on_end(self):
             self._logger.debug(f'ReciveClientDemand ended with status: {self.exit_code.name}')
+
 
     class ReceiveBusRoutes(BaseOneShotBehaviour):
         agent: 'MathematicianAgent'
@@ -150,8 +154,6 @@ class MathematicianAgent(agent.Agent):
 
     async def setup(self):
         self._logger.info('MathematicianAgent started')
-
-        self._logger.info('MathAgent started')
         await self._setup_ReciveClientDemand()
         await self._setup_ReceiveBusRoutes()
         await self._setup_InformBestPath()
@@ -166,6 +168,7 @@ class MathematicianAgent(agent.Agent):
         self.receive_bus_routes = self.RequestAvailableConnections()
     async def _setup_InformBestPath(self):
         self.inform_best_path = self.RequestAvailableConnections()
+
 
 
 if __name__ == '__main__':

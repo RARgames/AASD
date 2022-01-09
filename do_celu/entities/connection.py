@@ -15,5 +15,5 @@ class ConnectionRequest:
 
 
 class ConnectionResponse:
-    def __init__(self, connections: List[Connection]):
-        self.connections = connections
+    def __init__(self, best_connections: List[Connection]):
+        self.best_connections = best_connections
