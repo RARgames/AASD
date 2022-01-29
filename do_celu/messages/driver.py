@@ -3,6 +3,7 @@
 #
 # Copyright 2022 Agenty 007
 #
+from dataclasses import dataclass
 from spade.message import Message
 from spade.template import Template
 
@@ -10,35 +11,40 @@ from do_celu.utils.performatives import Performatives
 from do_celu.messages.base_message import BaseMessage
 
 
-class _DriverDataMessageBase(BaseMessage):
+class _RequestDriverDataMessageBase(BaseMessage):
 
     def _set_custom_properties(self) -> None:
         self.set_metadata("performative", Performatives.REQUEST.value)
         self.set_metadata("ontology", self._config.ONTOLOGY)
         self.set_metadata("language", "JSON")
-        self.set_metadata('behaviour', 'driver_data')
+        self.set_metadata('behaviour', 'request_driver_data')
 
 
-class DriverDataTemplate(_DriverDataMessageBase, Template):
+class RequestDriverDataTemplate(_RequestDriverDataMessageBase, Template):
     pass
 
 
-class DriverDataMessage(_DriverDataMessageBase, Message):
+class RequestDriverDataMessage(_RequestDriverDataMessageBase, Message):
     pass
 
 
-class _PathChangeMessageBase(BaseMessage):
+class _RequestPathChangeMessageBase(BaseMessage):
 
     def _set_custom_properties(self) -> None:
         self.set_metadata("performative", Performatives.INFORM.value)
         self.set_metadata("ontology", self._config.ONTOLOGY)
         self.set_metadata("language", "JSON")
-        self.set_metadata('behaviour', 'path_change')
+        self.set_metadata('behaviour', 'request_path_change')
 
 
-class PathChangeTemplate(_PathChangeMessageBase, Template):
+class RequestPathChangeTemplate(_RequestPathChangeMessageBase, Template):
     pass
 
 
-class PathChangeMessage(_PathChangeMessageBase, Message):
+class RequestPathChangeMessage(_RequestPathChangeMessageBase, Message):
     pass
+
+
+@dataclass(frozen=True)
+class PathChangeBody():
+    path: object

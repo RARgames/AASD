@@ -10,7 +10,7 @@ import time
 from spade import agent, quit_spade
 from spade.behaviour import CyclicBehaviour
 
-from do_celu.messages.driver import DriverDataMessage, PathChangeMessage
+from do_celu.messages.driver import RequestDriverDataMessage, RequestPathChangeMessage
 
 
 class DummyAgent(agent.Agent):
@@ -21,7 +21,7 @@ class DummyAgent(agent.Agent):
         iterator = 0
 
         async def run(self):
-            msg = PathChangeMessage(to='driver@localhost')
+            msg = RequestPathChangeMessage(to='driver@localhost')
             msg.body = json.dumps({'iterator': self.iterator, 'path': 'new_path'})
             try:
                 await self.send(msg)
@@ -42,7 +42,7 @@ class DummyAgent(agent.Agent):
         iterator = 0
 
         async def run(self):
-            msg = DriverDataMessage(to='driver@localhost')
+            msg = RequestDriverDataMessage(to='driver@localhost')
             msg.body = json.dumps({
                 'iterator': self.iterator,
             })

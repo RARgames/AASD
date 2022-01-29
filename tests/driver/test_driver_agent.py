@@ -13,7 +13,7 @@ from spade.behaviour import OneShotBehaviour
 
 from do_celu.agents.driver import DriverAgent
 from do_celu.config import get_config
-from do_celu.messages.driver import DriverDataMessage, DriverDataTemplate, PathChangeMessage, PathChangeTemplate
+from do_celu.messages.driver import RequestDriverDataMessage, RequestDriverDataTemplate, RequestPathChangeMessage, RequestPathChangeTemplate
 
 
 @pytest.fixture
@@ -36,24 +36,24 @@ def driver_agent() -> DriverAgent:
 
 
 def test_driver_data_template_match():
-    assert DriverDataTemplate().match(DriverDataMessage(to='test'))
+    assert RequestDriverDataTemplate().match(RequestDriverDataMessage(to='test'))
 
 
 def test_driver_data_template_not_match():
-    assert not DriverDataTemplate().match(PathChangeMessage(to='test'))
+    assert not RequestDriverDataTemplate().match(RequestPathChangeMessage(to='test'))
 
 
 def test_path_change_template_match():
-    assert PathChangeTemplate().match(PathChangeMessage(to='test'))
+    assert RequestPathChangeTemplate().match(RequestPathChangeMessage(to='test'))
 
 
 def test_path_change_template_not_match():
-    assert not PathChangeTemplate().match(DriverDataMessage(to='test'))
+    assert not RequestPathChangeTemplate().match(RequestDriverDataMessage(to='test'))
 
 
 @pytest.mark.asyncio
 async def test_request_driver_data_one_shot_behaviour(driver_agent: DriverAgent):
-    await driver_agent.receive_request_driver_data.enqueue(DriverDataMessage(to='test'))
+    await driver_agent.receive_request_driver_data.enqueue(RequestDriverDataMessage(to='test'))
     await asyncio.sleep(0.1)
 
     assert driver_agent.inform_driver_data.is_done() is True
@@ -82,7 +82,7 @@ async def test_request_driver_data_(driver_agent: DriverAgent):
     future = dummy.start()
     future.result()
 
-    await driver_agent.receive_request_driver_data.enqueue(DriverDataMessage(to=config.MANAGER_JID))
+    await driver_agent.receive_request_driver_data.enqueue(RequestDriverDataMessage(to=config.MANAGER_JID))
     await asyncio.sleep(0.1)
 
     dummy.stop()
@@ -96,7 +96,7 @@ async def test_request_driver_data_(driver_agent: DriverAgent):
 async def test_path_change(driver_agent: DriverAgent):
     new_path = 'new_path'
     await driver_agent.receive_inform_path_change.enqueue(
-        PathChangeMessage(
+        RequestPathChangeMessage(
             to='test',
             body=json.dumps({'path': new_path}),
         ))
