@@ -52,7 +52,7 @@ class DriverAgent(agent.Agent):
     ):
         super().__init__(jid, password, verify_security=verify_security)
         self._config = get_config()
-        self._logger = get_logger(LOGGER_NAME)
+        self._logger = get_logger(f'{LOGGER_NAME}/{jid}')
         self.__capacity = capacity
         self.__geolocation = geolocation
 
@@ -107,7 +107,7 @@ class DriverAgent(agent.Agent):
             super().__init__(LOGGER_NAME)
 
         async def on_start(self):
-            self._logger.info('InformDriverData running...')
+            self.agent._logger.info('InformDriverData running...')
 
         async def run(self):
             msg = ReceiveDriverDataMessage(to=self._config.MANAGER_JID)
@@ -115,14 +115,14 @@ class DriverAgent(agent.Agent):
 
             try:
                 await self.send(msg)
-                self._logger.debug('Message send!')
+                self.agent._logger.debug('Message send!')
             except Exception as e:
-                self._logger.error(e)
+                self.agent._logger.error(e)
                 self.kill(JobExitCode.FAILURE)
                 return
 
         async def on_end(self):
-            self._logger.info('InformDriverData ending...')
+            self.agent._logger.info('InformDriverData ending...')
             self.exit_code = JobExitCode.SUCCESS
 
     class ReceiveRequestDriverData(BaseCyclicBehaviour):
@@ -132,19 +132,19 @@ class DriverAgent(agent.Agent):
             super().__init__(LOGGER_NAME)
 
         async def on_start(self):
-            self._logger.info('ReceiveRequestDriverData running...')
+            self.agent._logger.info('ReceiveRequestDriverData running...')
 
         async def run(self):
             msg = await self.receive()
             if msg:
-                self._logger.debug(f'Message received: {msg}')
+                self.agent._logger.debug(f'Message received: {msg}')
                 if not self.agent.has_behaviour(self.agent.inform_driver_data):
-                    self._logger.debug('InformDriverData renewed')
+                    self.agent._logger.debug('InformDriverData renewed')
                     await self.agent._setup_inform_driver_data()
                     self.agent.add_behaviour(self.agent.inform_driver_data)
 
         async def on_end(self):
-            self._logger.info('ReceiveRequestDriverData ending...')
+            self.agent._logger.info('ReceiveRequestDriverData ending...')
 
     class ReceiveInformPathChange(BaseCyclicBehaviour):
         agent: 'DriverAgent'
@@ -153,19 +153,19 @@ class DriverAgent(agent.Agent):
             super().__init__(LOGGER_NAME)
 
         async def on_start(self):
-            self._logger.info('ReceiveInformPathChange running...')
+            self.agent._logger.info('ReceiveInformPathChange running...')
 
         async def run(self):
             msg = await self.receive()
             if msg:
-                self._logger.debug(f'Message received with content: {msg.body}')
+                self.agent._logger.debug(f'Message received with content: {msg.body}')
                 body = json.loads(msg.body)
                 path = body['path']
-                self._logger.debug(f'New path: {path}')
+                self.agent._logger.debug(f'New path: {path}')
                 self.agent.set_current_path(path)
 
         async def on_end(self):
-            self._logger.info('ReceiveInformPathChange ending...')
+            self.agent._logger.info('ReceiveInformPathChange ending...')
 
     class SubscribeToManager(BasePeriodicBehaviour):
         agent: 'DriverAgent'
@@ -178,7 +178,7 @@ class DriverAgent(agent.Agent):
             super().__init__(period, logger_name=LOGGER_NAME, start_at=start_at)
 
         async def on_start(self):
-            self._logger.info('SubscribeToManager running...')
+            self.agent._logger.info('SubscribeToManager running...')
             self.agent.presence.on_subscribe = self.on_subscribe
             self.agent.presence.on_subscribed = self.on_subscribed
             self.agent.presence.on_unsubscribed = self.on_unsubscribed
@@ -190,29 +190,29 @@ class DriverAgent(agent.Agent):
             if manager_jid not in self.agent.presence.get_contacts() \
                 or self.agent.presence.get_contact(manager_jid).get('subscription', None) == 'none':
                 self.agent.presence.unsubscribe(self.agent._config.MANAGER_JID)
-                self._logger.info(f'{self.agent._config.MANAGER_JID} have not accepted subscription.')
-                self._logger.info(f'Subscribing to {self._config.MANAGER_JID}.')
+                self.agent._logger.info(f'{self.agent._config.MANAGER_JID} have not accepted subscription.')
+                self.agent._logger.info(f'Subscribing to {self._config.MANAGER_JID}.')
                 self.agent.presence.subscribe(self.agent._config.MANAGER_JID)
 
         async def on_end(self):
-            self._logger.info('SubscribeToManager ending...')
+            self.agent._logger.info('SubscribeToManager ending...')
 
         def on_subscribe(self, jid: str):
-            self._logger.info(f'Agent {jid} asked for subscription.')
+            self.agent._logger.info(f'Agent {jid} asked for subscription.')
             if jid == self._config.MANAGER_JID:
                 self.presence.approve(jid)
                 self.presence.subscribe(jid)
 
         def on_subscribed(self, jid: str):
-            self._logger.info(f'Agent {jid} accepted subscription.')
+            self.agent._logger.info(f'Agent {jid} accepted subscription.')
 
         def on_unsubscribe(self, jid: str):
-            self._logger.info(f'Agent {jid} asked for removeing subscription.')
+            self.agent._logger.info(f'Agent {jid} asked for removeing subscription.')
             self.presence.approve(jid)
             self.presence.unsubscribe(jid)
 
         def on_unsubscribed(self, jid: str):
-            self._logger.info(f'Agent {jid} asked for unsubscribed.')
+            self.agent._logger.info(f'Agent {jid} asked for unsubscribed.')
 
 
 if __name__ == '__main__':
