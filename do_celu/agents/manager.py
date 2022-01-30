@@ -31,8 +31,6 @@ DRIVER_JID_REGEXP = re.compile(fr'^\w+{get_config().DRIVER_JID_SUFFIX}$')
 
 class ManagerAgent(agent.Agent):
     # Behaviours:
-    receive_welcome_driver_msg: 'ReceiveWelcomeDriverMsg'
-    receive_available_drivers_request: 'ReceiveAvailableDriversRequest'
     request_all_drivers_data: 'RequestAllDriversData'
     request_driver_data: 'RequestDriverData'
     receive_driver_data: 'ReceiveDriverData'
@@ -59,49 +57,10 @@ class ManagerAgent(agent.Agent):
     def set_driver_data(self, jid: str, data: ReceiveDriverDataBody) -> None:
         self._drivers_data[jid] = data
 
-    class ReceiveWelcomeDriverMsg(BaseOneShotBehaviour):
-        agent: 'ManagerAgent'
-
-        def __init__(self,):
-            super().__init__(LOGGER_NAME)
-
-        async def on_start(self):
-            self._logger.info('ReceiveWelcomeDriverMsg running...')
-
-        async def run(self):
-            msg = await self.receive(timeout=30)
-            if msg:
-                self._logger.debug(f'ReceiveWelcomeDriverMsg msg received with body: {msg.body}')
-                # TODO add to driver list (contacts)
-                self.exit_code = JobExitCode.SUCCESS
-            else:
-                self.exit_code = JobExitCode.FAILURE
-
-        async def on_end(self):
-            self._logger.info(f'ReceiveWelcomeDriverMsg ended with status: {self.exit_code.name}')
-
-    class ReceiveAvailableDriversRequest(BaseOneShotBehaviour):
-        agent: 'ManagerAgent'
-
-        def __init__(self,):
-            super().__init__(LOGGER_NAME)
-
-        async def on_start(self):
-            self._logger.debug('ReceiveAvailableDriversRequest running...')
-
-        async def run(self):
-            msg = await self.receive(timeout=30)
-            if msg:
-                self._logger.debug(f'ReceiveAvailableDriversRequest msg received with body: {msg.body}')
-                # TODO trigger getting driver data (find all available drivers and RequestDriverData)
-                self.exit_code = JobExitCode.SUCCESS
-            else:
-                self.exit_code = JobExitCode.FAILURE
-
-        async def on_end(self):
-            self._logger.debug(f'ReceiveAvailableDriversRequest ended with status: {self.exit_code.name}')
-
     class RequestAllDriversData(BaseOneShotBehaviour):
+        """
+        Request data from all available dirvers.
+        """
         agent: 'ManagerAgent'
 
         def __init__(self):
@@ -124,6 +83,7 @@ class ManagerAgent(agent.Agent):
             self._logger.info(f'RequestAllDriversData ended with status: {self.exit_code}')
 
     class RequestDriverData(BaseOneShotBehaviour):
+        """Request a specified (jid) driver data."""
         agent: 'ManagerAgent'
         _jid: str
 
@@ -143,6 +103,7 @@ class ManagerAgent(agent.Agent):
             self._logger.info(f'RequestDriverData ended with status: {self.exit_code}')
 
     class ReceiveDriverData(BaseCyclicBehaviour):
+        """Handle data recivied from drivers and save it to dictionary (_drivers_data)."""
         agent: 'ManagerAgent'
 
         def __init__(self,):
@@ -264,6 +225,7 @@ class ManagerAgent(agent.Agent):
             self._logger.debug(f'ReceiveClientPathProposal ended with status: {self.exit_code.name}')
 
     class InformDriverPathChange(BaseOneShotBehaviour):
+        """Infrom a specific (jid) driver about his new path."""
         agent: 'ManagerAgent'
         _jid: str
         _data: PathChangeBody
@@ -304,6 +266,7 @@ class ManagerAgent(agent.Agent):
             self._logger.debug(f'AcceptClientPathProposal ended with status: {self.exit_code.name}')
 
     class HandleSubscriptions(BasePeriodicBehaviour):
+        """Monitor subscriptions to manager."""
         agent: 'ManagerAgent'
 
         def __init__(
