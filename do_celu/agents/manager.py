@@ -26,7 +26,7 @@ from do_celu.context import get_logger
 from do_celu.utils.job_exit_code import JobExitCode
 
 LOGGER_NAME = get_config().MANAGER_LOGGER_NAME
-DRIVER_JID_REGEXP = re.compile(fr'^\w+{get_config().DRIVER_JID_SUFFIX}$')
+DRIVER_JID_REGEXP = re.compile(fr'^\w+{get_config().DRIVER_JID_SUFFIX}(/\d+)?$')
 
 
 class ManagerAgent(agent.Agent):
@@ -74,7 +74,7 @@ class ManagerAgent(agent.Agent):
                 self._logger.debug(f'Quering {jid}')
                 presence: aioxmpp.Presence = info.get('presence', None)
                 self._logger.debug(f'Presence {presence}')
-                if presence and presence.type_ == aioxmpp.PresenceType.AVAILABLE:
+                if DRIVER_JID_REGEXP.match(str(jid)) and presence and presence.type_ == aioxmpp.PresenceType.AVAILABLE:
                     self.agent._add_request_driver_data(jid=str(jid))
 
             self.exit_code = JobExitCode.SUCCESS
